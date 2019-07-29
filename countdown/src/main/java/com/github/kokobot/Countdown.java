@@ -19,11 +19,10 @@ import java.util.concurrent.CompletableFuture;
 
 public class Countdown {
     public static void main(String[] args) {
-        String token = ""; //add tokem of bot
+        String token = "NDYzOTcyNTk1ODIyMzYyNjI0.XTt3kg.BiO_8LFejTGHgrAskyjxsOf_w0I";
         DiscordApi api = new DiscordApiBuilder().setToken(token).login().join();
 
         api.addMessageCreateListener(Countdown::onMessageCreate);
-
         // Print the invite url of your bot
         System.out.println("You can invite the bot by using the following url: " + api.createBotInvite());
     }
@@ -31,13 +30,14 @@ public class Countdown {
     private static void onMessageCreate(MessageCreateEvent event) {
         String message = event.getMessage().getContent();
 
-        if (message.startsWith("!cd")) {
+        if (message.startsWith("!cd") || message.startsWith("!CD")) {
             String prompt = message.substring(3);
             if (prompt.startsWith(" n") || prompt.startsWith(" m")) {
                 prompt = prompt.substring(2);
                 if (prompt.isEmpty()) {
                     printN(event);
                 } else if (prompt.equals(" new")) {
+                    printRoundLeaderN(event);
                     processScoresN();
                     setNewN();
                     printN(event);
@@ -51,6 +51,7 @@ public class Countdown {
                 if (prompt.isEmpty()) {
                     printL(event);
                 } else if (prompt.equals(" 0")) {
+                    printRoundLeaderL(event);
                     processScoresL();
                     setNewL();
                     printL(event);
@@ -58,6 +59,13 @@ public class Countdown {
                     printScoresL(event);
                 } else {
                     checkSolutionL(prompt, event);
+                }
+            } else if (prompt.startsWith(" c")) {
+                prompt = prompt.substring(2);
+                if (prompt.isEmpty()) {
+                    printC(event);
+                } else {
+                    checkSolutionC(prompt, event);
                 }
             } else if (prompt.isEmpty()) {
                 printIntro(event);
@@ -148,9 +156,12 @@ public class Countdown {
 
         addScoreN(author, diff);
         if (diff == 0) {
+            EmbedBuilder e2 = new EmbedBuilder().setDescription(author + " gains 10 points.");
+            event.getChannel().sendMessage(e2);
             setNewN();
-            printN(event);
         }
+        printCurrentLeaderN(event);
+        printN(event);
 
     }
 
@@ -467,6 +478,7 @@ public class Countdown {
         event.getChannel().sendMessage(e);
         printN(event);
         printL(event);
+        printC(event);
     }
 
     private static Boolean isExpression(String prompt) {
@@ -502,6 +514,7 @@ public class Countdown {
         String message = "Letters:";
 
         EmbedBuilder e = new EmbedBuilder().setTitle("LETTERS ROUND " + n);
+        let = getRandArrangementL(let);
 
         for (int i=0; i<9; i++) {
             message += "\t\t" + let[i];
@@ -586,9 +599,12 @@ public class Countdown {
 
         addScoreL(author, len);
         if (len == 9) {
+            EmbedBuilder e2 = new EmbedBuilder().setDescription(author + " gains 18 points.");
+            event.getChannel().sendMessage(e2);
             setNewL();
-            printL(event);
         }
+        printCurrentLeaderL(event);
+        printL(event);
 
     }
 
@@ -652,16 +668,11 @@ public class Countdown {
 
     private static char[] getNewL() {
         int n = getNumVowels();
-        char[] L = new char[9], L2 = new char[9], v = getVowels(n), c = getConsonants(9-n);
+        char[] L = new char[9], v = getVowels(n), c = getConsonants(9-n);
         System.arraycopy(v,0,L,0,n);
         System.arraycopy(c,0,L,n,9-n);
 
-        int[] nL = new Random().ints(0, 9).distinct().limit(9).toArray();
-
-        for (int i=0; i<9; i++) {
-            L2[i] = L[nL[i]];
-        }
-        return L2;
+        return getRandArrangementL(L);
     }
 
     private static void setNewL() {
@@ -715,9 +726,7 @@ public class Countdown {
 
         for (int i=0; i<n; i++) {
             players[i] = lFile.nextLine();
-            System.out.println(players[i]);
             currentScore = lFile.nextInt();
-            System.out.println(currentScore);
 
             if (currentScore >= w) {
                 lFile.close();
@@ -725,7 +734,6 @@ public class Countdown {
             }
 
             totalScores[i] = lFile.nextInt();
-            System.out.println(totalScores[i]);
             lFile.nextLine();
 
             if (players[i].equals(author)) {
@@ -813,6 +821,245 @@ public class Countdown {
         EmbedBuilder e = new EmbedBuilder().setTitle("LETTERS LEADERBOARD");
         event.getChannel().sendMessage(e);
         event.getChannel().sendMessage(message);
+    }
+
+    private static char[] getRandArrangementL(char[] L) {
+        int[] nL = new Random().ints(0, 9).distinct().limit(9).toArray();
+        char[] L2 = new char[9];
+
+        for (int i=0; i<9; i++) {
+            L2[i] = L[nL[i]];
+        }
+        return L2;
+    }
+
+    private static String[] getCurrentLeader(char c) {
+        String[] leader = new String[2];
+        if (c == 'l') {
+            Scanner lFile = scanFile("scoresL.txt");
+            int n = lFile.nextInt(), currentScore;
+            String player;
+
+            lFile.nextLine();
+
+            for (int i=0; i<n; i++) {
+                player = lFile.nextLine();
+                currentScore = lFile.nextInt();
+
+                if (currentScore > 0) {
+                    lFile.close();
+                    leader[0] = player;
+                    leader[1] = String.valueOf(currentScore);
+                    return leader;
+                }
+                lFile.nextLine();
+
+            }
+            lFile.close();
+        } else if (c == 'n') {
+            Scanner nFile = scanFile("scoresN.txt");
+            int n = nFile.nextInt(), currentScore;
+            String player;
+
+            nFile.nextLine();
+
+            for (int i=0; i<n; i++) {
+                player = nFile.nextLine();
+                currentScore = nFile.nextInt();
+
+                if (currentScore < 11) {
+                    nFile.close();
+                    leader[0] = player;
+                    leader[1] = String.valueOf(currentScore);
+                    return leader;
+                }
+                nFile.nextLine();
+
+            }
+            nFile.close();
+        }
+        return leader;
+    }
+
+    private static void printCurrentLeaderN(MessageCreateEvent event) {
+        String[] leader = getCurrentLeader('n');
+        if (leader[0].isEmpty()) {
+            return;
+        }
+        String message = leader[0] + " is the current leader with " + leader[1] + " away.";
+        EmbedBuilder e = new EmbedBuilder().setDescription(message);
+        event.getChannel().sendMessage(e);
+    }
+
+    private static void printCurrentLeaderL(MessageCreateEvent event) {
+        String[] leader = getCurrentLeader('l');
+        if (leader[0].isEmpty()) {
+            return;
+        }
+        String message = leader[0] + " is the current leader with a " + leader[1] + " letter word.";
+        EmbedBuilder e = new EmbedBuilder().setDescription(message);
+        event.getChannel().sendMessage(e);
+    }
+
+    private static void printRoundLeaderN(MessageCreateEvent event) {
+        String[] leader = getCurrentLeader('n');
+        if (leader[0].isEmpty()) {
+            return;
+        }
+        String message = leader[0] + " gains " + getScoreN(Integer.valueOf(leader[1])) + " points.";
+        EmbedBuilder e = new EmbedBuilder().setDescription(message);
+        event.getChannel().sendMessage(e);
+    }
+
+    private static void printRoundLeaderL(MessageCreateEvent event) {
+        String[] leader = getCurrentLeader('l');
+        if (leader[0].isEmpty()) {
+            return;
+        }
+        String message = leader[0] + " gains " + Integer.valueOf(leader[1]) + " points.";
+        EmbedBuilder e = new EmbedBuilder().setDescription(message);
+        event.getChannel().sendMessage(e);
+    }
+
+    private static void printC(MessageCreateEvent event) {
+        char[] let = scanC();
+        int n = scanNumC();
+        String message = "Letters:";
+
+        EmbedBuilder e = new EmbedBuilder().setTitle("CONUNDRUM ROUND " + n);
+        let = getRandArrangementL(let);
+
+        for (int i=0; i<9; i++) {
+            message += "\t\t" + let[i];
+        }
+
+        event.getChannel().sendMessage(e);
+        event.getChannel().sendMessage(message);
+    }
+
+    private static char[] scanC() {
+        Scanner cFile = scanFile("c.txt");
+        String letters;
+        char[] c = new char[9];
+
+        letters = cFile.nextLine();
+
+        for (int i=0; i<9; i++) {
+            c[i] = letters.charAt(i);
+        }
+        cFile.close();
+        return c;
+    }
+
+    private static int scanNumC() {
+        Scanner cFile = scanFile("c.txt");
+        cFile.nextLine();
+        int n = cFile.nextInt();
+        cFile.close();
+        return n;
+    }
+
+    private static void checkSolutionC(String word, MessageCreateEvent event) {
+        char[] c = getChar(word);
+        char[] w = Arrays.copyOfRange(c, 1, c.length);
+
+        if (!isLetters(c)) {
+            printErrorExpressionC(event, -1);
+            return;
+        }
+
+        String W = new String(w).toUpperCase();
+
+        if (!W.equals(new String(scanC()))) {
+            printErrorExpressionC(event, -2);
+            return;
+        }
+
+        EmbedBuilder e = new EmbedBuilder();
+        String message;
+
+        String author = event.getMessage().getAuthor().getDisplayName();
+
+        message = W + " is the conundrum.\n" + author + " gains 10 points.";
+        e.setTitle(author + "'s WORD").setDescription(message);
+        event.getChannel().sendMessage(e);
+
+        addScoreC(author);
+        setNewC();
+        printC(event);
+
+    }
+
+    private static void printErrorExpressionC(MessageCreateEvent event, int n) {
+        EmbedBuilder e = new EmbedBuilder();
+        String message = "Incorrect letters or word.";
+        if (n == -1) {
+            message = "Incorrect letters.";
+        } else if (n == -2) {
+            message = "Incorrect word.";
+        }
+        e.setTitle("ERROR").setDescription(message);
+        event.getChannel().sendMessage(e);
+        printC(event);
+    }
+
+    private static void addScoreC(String author) {
+        Scanner cFileIn = scanFile("scoresC.txt");
+        PrintWriter cFileOut = writeFile("tmp.txt");
+        int n = cFileIn.nextInt(), isFound=0;
+        int[] scores = new int[n];
+        String[] players = new String[n];
+
+
+        cFileIn.nextLine();
+
+        for (int i=0; i<n; i++) {
+            players[i] = cFileIn.nextLine();
+            scores[i] = cFileIn.nextInt();
+
+            cFileIn.nextLine();
+
+            if (players[i].equals(author)) {
+                scores[i] += 10;
+                isFound = 1;
+            }
+        }
+        cFileIn.close();
+
+        if (isFound == 0) {
+            n++;
+        }
+
+        cFileOut.println(n);
+        for (int i=0; i<n; i++) {
+            cFileOut.println(players[i]);
+            cFileOut.println(scores[i]);
+        }
+
+        if (isFound == 0) {
+            cFileOut.println(author);
+            cFileOut.println(10);
+        }
+
+        cFileOut.close();
+        renameFile("tmp.txt", "scoresC.txt");
+    }
+
+    private static void setNewC() {
+        Scanner cFileIn = scanFile("conundrum.txt");
+        String w = "";
+        int n = cFileIn.nextInt();
+        n = new Random().nextInt(n)+1;
+        for (int i=0; i<n; i++) {
+            w = cFileIn.nextLine();
+        }
+        cFileIn.close();
+        n = scanNumC();
+        n++;
+        PrintWriter cFileOut = writeFile("c.txt");
+        cFileOut.println(w);
+        cFileOut.println(n);
+        cFileOut.close();
     }
 
 }
