@@ -19,7 +19,7 @@ import java.util.concurrent.CompletableFuture;
 
 public class Countdown {
     public static void main(String[] args) {
-        String token = "NDYzOTcyNTk1ODIyMzYyNjI0.XTt3kg.BiO_8LFejTGHgrAskyjxsOf_w0I";
+        String token = ""; \\put your token
         DiscordApi api = new DiscordApiBuilder().setToken(token).login().join();
 
         api.addMessageCreateListener(Countdown::onMessageCreate);
